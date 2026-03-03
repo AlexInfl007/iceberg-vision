@@ -6,6 +6,18 @@ class EventBus:
     def register(self, callback):
         self.listeners.append(callback)
 
+    def unregister(self, callback):
+        if callback in self.listeners:
+            self.listeners.remove(callback)
+
     async def emit(self, event):
+        stale = []
+
         for listener in self.listeners:
-            await listener(event)
+            try:
+                await listener(event)
+            except Exception:
+                stale.append(listener)
+
+        for listener in stale:
+            self.unregister(listener)
