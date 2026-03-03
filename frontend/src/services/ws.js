@@ -1,19 +1,43 @@
 let socket = null
+let reconnectTimer = null
 
-export function connectWS(onMessage) {
-  socket = new WebSocket("ws://127.0.0.1:8000/ws")
+export function connectWS({ onMessage, onStatusChange }) {
+  const connect = () => {
+    onStatusChange?.("connecting")
+    socket = new WebSocket("ws://127.0.0.1:8000/ws")
 
-  socket.onopen = () => {
-    console.log("WS connected")
+    socket.onopen = () => {
+      onStatusChange?.("connected")
+    }
+
+    socket.onmessage = (event) => {
+      try {
+        const data = JSON.parse(event.data)
+        onMessage?.(data)
+      } catch (error) {
+        console.error("WS parse error", error)
+      }
+    }
+
+    socket.onerror = () => {
+      onStatusChange?.("error")
+    }
+
+    socket.onclose = () => {
+      onStatusChange?.("reconnecting")
+      reconnectTimer = setTimeout(connect, 2000)
+    }
   }
 
-  socket.onmessage = (event) => {
-    const data = JSON.parse(event.data)
-    onMessage(data)
-  }
+  connect()
 
-  socket.onclose = () => {
-    console.log("WS reconnecting...")
-    setTimeout(() => connectWS(onMessage), 2000)
+  return () => {
+    if (reconnectTimer) {
+      clearTimeout(reconnectTimer)
+    }
+
+    if (socket && socket.readyState <= 1) {
+      socket.close()
+    }
   }
 }

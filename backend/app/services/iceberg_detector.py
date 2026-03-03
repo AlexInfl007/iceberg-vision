@@ -5,7 +5,7 @@ from dotenv import load_dotenv
 from sqlalchemy import text
 
 from app.core.database import SessionLocal
-from app.models.iceberg import Iceberg
+from app.models import Iceberg
 
 load_dotenv()
 
